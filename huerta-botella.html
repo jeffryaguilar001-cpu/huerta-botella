@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>De la Huerta a la Botella</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: url('mapa.png') center / cover no-repeat fixed;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .game {
+    background: rgba(245, 240, 232, 0.9);
+    border-radius: 24px;
+    padding: 30px;
+    max-width: 560px;
+    width: 100%;
+    margin: 0;
+    flex-shrink: 0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+  h1 { font-size: 1.6rem; color: #2d5a2d; margin-bottom: 4px; }
+  .subtitle { color: #6b8f6b; font-size: 0.9rem; margin-bottom: 18px; }
+  .step-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .step {
+    background: white;
+    border: 2px solid #cfe2cf;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+  }
+  .step:hover { border-color: #8fbc8f; background: #f9fff9; }
+  .step .num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #e8f5e8;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #2d5a2d; flex-shrink: 0;
+  }
+  .step .num.done { background: #4caf50; color: white; }
+  .step .num.err { background: #ef5350; color: white; }
+  .step .icon { font-size: 1.4rem; flex-shrink: 0; width: 28px; text-align: center; }
+  .step .label { flex: 1; text-align: left; font-weight: 600; color: #333; font-size: 0.95rem; }
+  .step .desc { font-size: 0.75rem; color: #999; }
+  .selected { border-color: #4caf50; background: #f0faf0; box-shadow: 0 0 0 2px #a5d6a7; }
+  .bar {
+    background: #e8f0e8; border-radius: 12px; padding: 12px 18px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    margin: 12px 0;
+  }
+  .bar span { font-size: 0.9rem; color: #444; }
+  .bar strong { color: #2d5a2d; }
+  .btn {
+    background: #4caf50; color: white; border: none; padding: 10px 24px;
+    border-radius: 30px; font-weight: 700; font-size: 1rem; cursor: pointer;
+    transition: background 0.2s; margin: 4px;
+  }
+  .btn:hover { background: #388e3c; }
+  .fb {
+    margin-top: 14px; padding: 12px; border-radius: 12px; font-weight: 600;
+    display: none; font-size: 0.95rem;
+  }
+  .fb.show { display: block; }
+  .fb.ok { background: #e8f5e9; color: #2e7d32; }
+  .fb.err { background: #fce4e4; color: #c62828; }
+  .fb.win { background: #fff8e1; color: #f57f17; }
+  .step.dim { cursor: default; opacity: 0.6; }
+
+  /* Dancing Avocado */
+  .avo-container {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .avo-container.show { display: block; }
+  .avo {
+    position: absolute;
+    font-size: 5rem;
+    animation: dance 0.6s infinite alternate ease-in-out;
+    user-select: none;
+  }
+  .avo.a1 { top: 5%; left: 5%; animation-delay: 0s; }
+  .avo.a2 { top: 60%; right: 8%; animation-delay: 0.2s; font-size: 4rem; }
+  .avo.a3 { bottom: 5%; left: 40%; animation-delay: 0.4s; font-size: 3.5rem; }
+  .avo.a4 { top: 30%; right: 20%; animation-delay: 0.1s; font-size: 2.5rem; }
+  .particle {
+    position: absolute;
+    font-size: 1.5rem;
+    animation: floatUp 2s infinite;
+  }
+  @keyframes dance {
+    0% { transform: translateY(0) rotate(-8deg); }
+    100% { transform: translateY(-30px) rotate(8deg); }
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+  }
+  .msg-200 {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 20;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    animation: popIn 0.5s ease;
+  }
+  .msg-200.show { display: flex; }
+  .msg-200 img { max-width: 90%; max-height: 90%; height: auto; display: block; }
+  @keyframes popIn {
+    0% { transform: scale(0); }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <h1>🥑 De la Huerta a la Botella 🍾</h1>
+  <p class="subtitle">Haz clic en los pasos en el orden correcto del proceso</p>
+
+  <div class="bar">
+    <span>⭐ <strong id="score">0</strong> pts</span>
+    <span>✅ <strong id="tries">0</strong> errores</span>
+  </div>
+
+  <p id="instruc" style="color:#666; font-size:0.85rem; margin-bottom:6px;">
+    Paso <strong id="currentStep">1</strong> de 8 — elige el siguiente paso
+  </p>
+
+  <div class="step-list" id="stepList"></div>
+  <div class="fb" id="fb"></div>
+
+  <button class="btn" id="resetBtn">↻ Reiniciar</button>
+  <p style="margin-top:14px; font-size:0.75rem; color:#aaa;">Trabajo de gamificación — aceite de aguacate 🥑</p>
+
+  <div class="avo-container" id="avoContainer">
+    <div class="avo a1">🥑</div>
+    <div class="avo a2">🥑</div>
+    <div class="avo a3">🥑</div>
+    <div class="avo a4">🥑</div>
+    <div class="particle" style="top:10%; left:20%;">✨</div>
+    <div class="particle" style="top:15%; right:30%; animation-delay:0.3s;">✨</div>
+    <div class="particle" style="top:70%; left:15%; animation-delay:0.6s;">⭐</div>
+    <div class="particle" style="bottom:20%; right:10%; animation-delay:0.9s;">💫</div>
+  </div>
+  <div class="msg-200" id="msg200">
+    <img src="lema.jpeg" alt="Lema">
+  </div>
+  </div>
+<script>
+  const STEPS = [
+    { icon: '🥑', label: 'Cosecha', desc: 'Recolección de aguacates maduros' },
+    { icon: '✅', label: 'Selección', desc: 'Clasificación de frutos de mejor calidad' },
+    { icon: '💧', label: 'Lavado', desc: 'Limpieza de frutos para eliminar impurezas' },
+    { icon: '⚙️', label: 'Trituración', desc: 'Molienda de la pulpa hasta formar pasta' },
+    { icon: '🔧', label: 'Prensado en frío', desc: 'Extracción mecánica sin calor' },
+    { icon: '🧪', label: 'Filtrado', desc: 'Separación de residuos sólidos y agua' },
+    { icon: '🔬', label: 'Control de calidad', desc: 'Verificación de pureza y acidez' },
+    { icon: '🍾', label: 'Embotellado', desc: 'Envasado en botellas listas para venta' },
+  ];
+
+  let items = [];
+  let currentPick = 0;
+  let score = 0;
+  let tries = 0;
+  let gameOver = false;
+  let avoActive = false;
+
+  const stepList = document.getElementById('stepList');
+  const fb = document.getElementById('fb');
+  const scoreEl = document.getElementById('score');
+  const triesEl = document.getElementById('tries');
+  const currentStepEl = document.getElementById('currentStep');
+  const instruc = document.getElementById('instruc');
+  const avoContainer = document.getElementById('avoContainer');
+  const msg200 = document.getElementById('msg200');
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function checkAvocadoDance() {
+    if (score >= 150 && !avoActive) {
+      avoActive = true;
+      avoContainer.classList.add('show');
+      msg200.classList.add('show');
+    }
+  }
+
+  function render() {
+    stepList.innerHTML = '';
+    items.forEach((item, idx) => {
+      const d = STEPS[item.idx];
+      const div = document.createElement('div');
+      div.className = 'step';
+      if (item.state === 'done') div.classList.add('dim');
+      const num = document.createElement('div');
+      num.className = 'num';
+      if (item.state === 'done') { num.classList.add('done'); num.textContent = '✓'; }
+      else if (item.state === 'err') { num.classList.add('err'); num.textContent = '✗'; }
+      else num.textContent = idx + 1;
+      div.appendChild(num);
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.textContent = d.icon;
+      div.appendChild(icon);
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.innerHTML = d.label + '<div class="desc">' + d.desc + '</div>';
+      div.appendChild(label);
+      if (item.state === 'done') {
+        // no click
+      } else {
+        div.addEventListener('click', () => pickItem(idx));
+        if (item.highlight) div.classList.add('selected');
+      }
+      stepList.appendChild(div);
+    });
+    currentStepEl.textContent = Math.min(currentPick + 1, 8);
+    if (gameOver) {
+      instruc.textContent = '🎉 ¡Completaste el proceso! Presiona Reiniciar para jugar de nuevo.';
+    } else {
+      instruc.innerHTML = 'Paso <strong>' + (currentPick + 1) + '</strong> de 8 — elige el siguiente paso';
+    }
+  }
+
+  function pickItem(idx) {
+    if (gameOver) return;
+    const item = items[idx];
+    if (item.state === 'done') return;
+
+    if (item.idx === currentPick) {
+      item.state = 'done';
+      item.highlight = false;
+      currentPick++;
+      hideFb();
+      if (currentPick === 8) {
+        win();
+      }
+      render();
+    } else {
+      item.state = 'err';
+      item.highlight = false;
+      tries++;
+      triesEl.textContent = tries;
+      showFb('❌ Ese no es el paso correcto. ¡Intenta de nuevo!', 'err');
+      render();
+      setTimeout(() => {
+        item.state = null;
+        render();
+      }, 500);
+    }
+  }
+
+  function win() {
+    gameOver = true;
+    const tryBonus = Math.max(0, (8 - tries) * 10);
+    const total = 100 + tryBonus;
+    score += total;
+    scoreEl.textContent = score;
+    showFb(`🎉 ¡Excelente! Completaste con ${tries} errores. +${total} pts`, 'win');
+    checkAvocadoDance();
+    render();
+  }
+
+  function showFb(msg, type) {
+    fb.textContent = msg;
+    fb.className = 'fb show ' + type;
+  }
+
+  function hideFb() {
+    fb.className = 'fb';
+  }
+
+  function reset() {
+    gameOver = false;
+    currentPick = 0;
+    tries = 0;
+    triesEl.textContent = '0';
+    hideFb();
+    avoContainer.classList.remove('show');
+    msg200.classList.remove('show');
+    avoActive = false;
+    const indices = STEPS.map((_, i) => i);
+    items = shuffle(indices).map(i => ({ idx: i, state: null, highlight: false }));
+    render();
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  reset();
+</script>
+</body>
+</html>
